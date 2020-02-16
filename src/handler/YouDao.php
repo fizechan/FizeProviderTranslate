@@ -1,17 +1,20 @@
 <?php
-/**
- * 有道翻译，收费，有100元体验券
- */
 
-namespace fize\tool\translate\handler;
+namespace fize\provider\translate\handler;
 
-
+use RuntimeException;
+use fize\misc\MbString;
+use fize\crypt\Utf8;
 use fize\net\Http;
-use Exception;
-use fize\tool\translate\TranslateHandler;
+use fize\crypt\Json;
+use fize\provider\translate\TranslateHandler;
 
-
-class YouDao implements TranslateHandler
+/**
+ * 有道翻译
+ *
+ * 收费，有100元体验券
+ */
+class YouDao extends TranslateHandler
 {
     const URL = 'http://openapi.youdao.com/api';
 
@@ -43,29 +46,100 @@ class YouDao implements TranslateHandler
     ];
 
     /**
-     * @var Http
-     */
-    private $http;
-
-    /**
-     * @var string
+     * @var string APPKEY
      */
     private $appKey;
 
     /**
-     * @var string
+     * @var string 密钥
      */
     private $secKey;
 
     /**
-     * YouDao constructor.
-     * @param array $options ['appkey' => string, 'seckey' => string]
+     * 构造
+     *
+     * 参数 `$config`:
+     *   ['appkey' => string, 'seckey' => string]
+     * @param array $config
      */
-    public function __construct(array $options)
+    public function __construct(array $config = null)
     {
-        $this->appKey = $options['appkey'];
-        $this->secKey = $options['seckey'];
-        $this->http = new Http();
+        parent::__construct($config);
+        $this->appKey = $config['appkey'];
+        $this->secKey = $config['seckey'];
+    }
+
+    /**
+     * 文章翻译
+     * 如果是XML、HTML，则只翻译字符节点
+     * @param string $content 要翻译的内容
+     * @param string $to TO语言
+     * @param string $from FROM语言
+     * @return string
+     */
+    public function article($content, $to = null, $from = null)
+    {
+        $cur_encoding = MbString::detectEncoding($content);
+        if ($cur_encoding == "UTF-8" && MbString::checkEncoding($content, "UTF-8") == false) {
+            $content = Utf8::encode($content);
+        }
+
+        if (is_null($from)) {
+            $from = 'auto';
+        }
+        if (is_null($to)) {
+            $to = 'auto';
+        }
+        $from = self::languageMap($from);
+        $to = self::languageMap($to);
+
+        $salt = rand(10000, 99999);
+        $sign = $this->buildSign($content, $this->appKey, $salt, $this->secKey);
+
+        $data = [
+            'q'      => $content,
+            'from'   => $from,
+            'to'     => $to,
+            'appKey' => $this->appKey,
+            'salt'   => $salt,
+            'sign'   => $sign
+        ];
+        $response = Http::post(self::URL, $data);
+
+        if ($response === false) {
+            throw new RuntimeException(Http::getLastErrMsg(), Http::getLastErrCode());
+        }
+
+        $json = Json::decode($response);
+        if (!isset($json['translation'])) {
+            throw new RuntimeException(self::$errMsgs[(string)$json['errorCode']], $json['errorCode']);
+        }
+
+        return $json['translation'][0];
+    }
+
+    /**
+     * 句子翻译
+     * @param string $content 要翻译的内容
+     * @param string $to TO语言
+     * @param string $from FROM语言
+     * @return string
+     */
+    public function sentence($content, $to = null, $from = null)
+    {
+        return $this->article($content, $to, $from);
+    }
+
+    /**
+     * 单词翻译
+     * @param string $content 要翻译的内容
+     * @param string $to TO语言
+     * @param string $from FROM语言
+     * @return string
+     */
+    public function word($content, $to = null, $from = null)
+    {
+        return $this->article($content, $to, $from);
     }
 
     /**
@@ -79,82 +153,23 @@ class YouDao implements TranslateHandler
     private function buildSign($query, $appKey, $salt, $secKey)
     {
         $str = $appKey . $query . $salt . $secKey;
-        $ret = strtoupper(md5($str));
-        return $ret;
+        return strtoupper(md5($str));
     }
 
     /**
-     * 文章翻译
-     * 如果是XML、HTML，则只翻译字符节点
-     * @param string $content 要翻译的内容
-     * @param string $from FROM语言
-     * @param string $to TO语言
+     * 统一化语言标识
+     * @param string $lang 语言标识
      * @return string
      */
-    public function article($content, $from = null, $to = null)
+    private static function languageMap($lang)
     {
-        $cur_encoding = mb_detect_encoding($content) ;
-        if($cur_encoding == "UTF-8" && mb_check_encoding($content, "UTF-8")){
-            //nothing
-        }else{
-            $content = utf8_encode($content);
-        }
-        if(is_null($from)){
-            $from = 'auto';
-        }
-        if(is_null($to)){
-            $to = 'auto';
-        }
-        $salt = rand(10000, 99999);
-        $sign = $this->buildSign($content, $this->appKey, $salt, $this->secKey);
-        $data = [
-            //'q' => rawurlencode($content),
-            'q' => $content,
-            'from' => $from,
-            'to' => $to,
-            'appKey' => $this->appKey,
-            'salt' =>  $salt,
-            'sign' => $sign
+        $maps = [
+            'zh-CHS' => 'zh',
+            'EN'     => 'en'
         ];
-        //var_dump($data);
-        $response = $this->http->post(self::URL, $data);
-
-        if ($response === false) {
-            throw new Exception("发送POST请求时发生错误", 100001);
+        if (isset($maps[$lang])) {
+            return $maps[$lang];
         }
-
-        $json = json_decode($response, true);
-
-        //var_dump($json);
-
-        if(!isset($json['translation'])){
-            throw new Exception(self::$errMsgs[(string)$json['errorCode']], $json['errorCode']);
-        }
-
-        return $json['translation'][0];
-    }
-
-    /**
-     * 句子翻译
-     * @param string $content 要翻译的内容
-     * @param string $from FROM语言
-     * @param string $to TO语言
-     * @return string
-     */
-    public function sentence($content, $from = null, $to = null)
-    {
-        return $this->article($content, $from, $to);
-    }
-
-    /**
-     * 单词翻译
-     * @param string $content 要翻译的内容
-     * @param string $from FROM语言
-     * @param string $to TO语言
-     * @return string
-     */
-    public function word($content, $from = null, $to = null)
-    {
-        return $this->article($content, $from, $to);
+        return $lang;
     }
 }
