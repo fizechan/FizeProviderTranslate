@@ -3,7 +3,7 @@
 namespace fize\provider\translate;
 
 /**
- * 接口：翻译
+ * 接口
  */
 abstract class TranslateHandler
 {

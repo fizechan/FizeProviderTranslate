@@ -5,6 +5,7 @@ namespace handler;
 use fize\provider\translate\handler\BaiDu;
 use PHPUnit\Framework\TestCase;
 
+
 class TestBaiDu extends TestCase
 {
 

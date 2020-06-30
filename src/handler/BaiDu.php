@@ -3,10 +3,10 @@
 namespace fize\provider\translate\handler;
 
 use RuntimeException;
-use fize\misc\MbString;
-use fize\crypt\Utf8;
-use fize\net\Http;
 use fize\crypt\Json;
+use fize\crypt\Utf8;
+use fize\misc\MbString;
+use fize\net\Http;
 use fize\provider\translate\TranslateHandler;
 
 /**
@@ -17,6 +17,7 @@ use fize\provider\translate\TranslateHandler;
  */
 class BaiDu extends TranslateHandler
 {
+
     const URL_PRIVATE = 'http://api.fanyi.baidu.com/api/trans/private/translate';
 
     const URL = 'http://api.fanyi.baidu.com/api/trans/vip/translate';
@@ -36,7 +37,7 @@ class BaiDu extends TranslateHandler
      *
      * 参数 `$config`:
      *   ['appid' => string, 'seckey' => string]
-     * @param array $config
+     * @param array $config 配置
      */
     public function __construct(array $config = null)
     {
@@ -90,10 +91,7 @@ class BaiDu extends TranslateHandler
             'salt'  => $salt,
             'sign'  => $sign
         ];
-        $response = Http::post(self::URL, $data, ['Content-Type' => 'application/x-www-form-urlencoded']);
-        if ($response === false) {
-            throw new RuntimeException(Http::getLastErrMsg(), Http::getLastErrCode());
-        }
+        $response = Http::post(self::URL, $data, true, ['Content-Type' => 'application/x-www-form-urlencoded']);
 
         $json = Json::decode($response);
         if (!isset($json['trans_result'])) {

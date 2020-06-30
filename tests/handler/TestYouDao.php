@@ -5,6 +5,7 @@ namespace handler;
 use fize\provider\translate\handler\YouDao;
 use PHPUnit\Framework\TestCase;
 
+
 class TestYouDao extends TestCase
 {
 

@@ -3,10 +3,10 @@
 namespace fize\provider\translate\handler;
 
 use RuntimeException;
-use fize\misc\MbString;
-use fize\crypt\Utf8;
-use fize\net\Http;
 use fize\crypt\Json;
+use fize\crypt\Utf8;
+use fize\misc\MbString;
+use fize\net\Http;
 use fize\provider\translate\TranslateHandler;
 
 /**
@@ -16,6 +16,7 @@ use fize\provider\translate\TranslateHandler;
  */
 class YouDao extends TranslateHandler
 {
+
     const URL = 'http://openapi.youdao.com/api';
 
     /**
@@ -104,11 +105,7 @@ class YouDao extends TranslateHandler
             'salt'   => $salt,
             'sign'   => $sign
         ];
-        $response = Http::post(self::URL, $data);
-
-        if ($response === false) {
-            throw new RuntimeException(Http::getLastErrMsg(), Http::getLastErrCode());
-        }
+        $response = Http::post(self::URL, $data, true);
 
         $json = Json::decode($response);
         if (!isset($json['translation'])) {
