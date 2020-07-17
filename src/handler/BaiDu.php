@@ -91,9 +91,8 @@ class BaiDu extends TranslateHandler
             'salt'  => $salt,
             'sign'  => $sign
         ];
-        $response = Http::post(self::URL, $data, true, ['Content-Type' => 'application/x-www-form-urlencoded']);
-
-        $json = Json::decode($response);
+        $content = Http::post(self::URL, $data, ['Content-Type' => 'application/x-www-form-urlencoded']);
+        $json = Json::decode($content);
         if (!isset($json['trans_result'])) {
             throw new RuntimeException($json['error_msg'], (int)$json['error_code']);
         }

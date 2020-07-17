@@ -105,9 +105,8 @@ class YouDao extends TranslateHandler
             'salt'   => $salt,
             'sign'   => $sign
         ];
-        $response = Http::post(self::URL, $data, true);
-
-        $json = Json::decode($response);
+        $content = Http::post(self::URL, $data);
+        $json = Json::decode($content);
         if (!isset($json['translation'])) {
             throw new RuntimeException(self::$errMsgs[(string)$json['errorCode']], $json['errorCode']);
         }

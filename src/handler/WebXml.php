@@ -62,10 +62,9 @@ class WebXml extends TranslateHandler
         $data = [
             'wordKey' => $content
         ];
-        $response = Http::post($url, $data, true);
-
+        $content = Http::post($url, $data);
         $doc = new DOMDocument();
-        $doc->loadXML($response);
+        $doc->loadXML($content);
         $items = $doc->getElementsByTagName("Translation");
         if (!$items) {
             throw new RuntimeException('使用WebXml翻译服务时发生错误！');
